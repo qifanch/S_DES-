@@ -1,0 +1,142 @@
+class S_DES:
+    p_10 = [3, 5, 2, 7, 4, 10, 1, 9, 8, 6]
+    p_8 = [6, 3, 7, 4, 8, 5, 10, 9]
+    ip = [2, 6, 3, 1, 4, 8, 5, 7]
+    ip_c = [4, 1, 3, 5, 7, 2, 8, 6]
+    e_p_box = [4, 1, 2, 3, 2, 3, 4, 1]
+    S1 = [
+        [1, 0, 3, 2],
+        [3, 2, 1, 0],
+        [0, 2, 1, 3],
+        [3, 1, 0, 2]
+    ]
+    S2 = [
+        [0, 1, 2, 3],
+        [2, 3, 1, 0],
+        [3, 0, 1, 2],
+        [2, 1, 0, 3]
+    ]
+    s_p_box = [2, 4, 3, 1]
+
+    def __init__(self,cipher):
+        self.cipher = cipher
+        self.k1,self.k2=self.key_generation()
+
+    def p_box(self,string, method):
+        result = ''
+        for i in method:
+            result += string[i - 1]
+        return result
+
+    def s_box(self,string_l,string_u,method):
+        int_l=self.binary2decimal(string_l)
+        int_u=self.binary2decimal(string_u)
+        return self.decimal2binary(method[int_l][int_u])
+
+    def xor(self,string1,string2):
+        result=''
+        for i in range(len(string1)):
+            if string1[i]!=string2[i]:
+                result+='1'
+            else:
+                result+='0'
+        return result
+
+    def left_shift(self,string):
+        return string[1:]+string[0]
+
+    def segmentation(self,string):
+        length = len(string)
+        return string[:length//2],string[length//2:]
+
+    def f(self,R,k_i):
+        R=self.p_box(R,self.e_p_box)
+        R2=self.xor(R,k_i)
+        R3=self.s_box(R2[0]+R2[3],R2[1]+R2[2],self.S1)+self.s_box(R2[4]+R2[7],R2[5]+R2[6],self.S2)
+        R4=self.p_box(R3,self.s_p_box)
+        return R4
+
+    def binary2decimal(self,binary):
+        decimal=0
+        for i in binary:
+            decimal*=2
+            decimal+=int(i)
+        return decimal
+
+    def decimal2binary(self,decimal):
+        if decimal==0:
+            binary='00'
+        elif decimal==1:
+            binary='01'
+        elif decimal==2:
+            binary='10'
+        elif decimal==3:
+            binary='11'
+        return binary
+
+    #密钥生成
+    def key_generation(self):
+        cipher2=self.p_box(self.cipher,self.p_10)
+        cipher_l,cipher_r=self.segmentation(cipher2)
+        cipher_l=self.left_shift(cipher_l)
+        cipher_r=self.left_shift(cipher_r)
+        k1=self.p_box(cipher_l+cipher_r,self.p_8)
+        cipher_l=self.left_shift(cipher_l)
+        cipher_r=self.left_shift(cipher_r)
+        k2=self.p_box(cipher_l+cipher_r,self.p_8)
+        return k1,k2
+
+    #加密全过程
+    def encrypt_one(self,plaintext):
+        plaintext2=self.p_box(plaintext,self.ip)
+        L,R=self.segmentation(plaintext2)
+        L=self.xor(L,self.f(R,self.k1))
+        L,R=R,L
+        L=self.xor(L,self.f(R,self.k2))
+        ciphertext=self.p_box(L+R,self.ip_c)
+        return ciphertext
+
+    def encrypt_more(self,plaintext):
+        last_ciphertext='00000000'
+        ciphertext=''
+        for i in plaintext:
+            i_ascll = bin(ord(i))[2:].zfill(8)
+            last_ciphertext=self.encrypt_one(self.xor(last_ciphertext,i_ascll))
+            ciphertext+=chr(int(last_ciphertext, 2))
+        return ciphertext
+
+    def encrypt(self,plaintext,mode):
+        if mode == "8bit":
+            return self.encrypt_one(plaintext)
+        if mode == "ASCII字符串":
+            return self.encrypt_more(plaintext)
+
+    #解密全过程
+    def decrypt(self,ciphertext):
+        ciphertext2=self.p_box(ciphertext,self.ip)
+        L,R=self.segmentation(ciphertext2)
+        L=self.xor(L,self.f(R,self.k2))
+        L,R=R,L
+        L=self.xor(L,self.f(R,self.k1))
+        plaintext_last=self.p_box(L+R,self.ip_c)
+        return plaintext_last
+
+    @staticmethod
+    def isright(text,length):
+        if len(text)==length:
+            for i in text:
+                if i not in ['1','0']:
+                    return False
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def is_ASCII_text(text):
+        return all(ord(char) < 128 for char in text)
+
+if __name__=="__main__":
+    test=S_DES('1010000010')
+    result=test.encrypt_one('10111001')
+    print(result)
+    print(test.decrypt(result))
