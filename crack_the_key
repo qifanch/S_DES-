@@ -1,0 +1,35 @@
+import itertools
+import S_DES_algorithm  # 假设你已经有S-DES的实现
+import time
+
+start_time = time.time()
+# 明文和已知密文
+plaintext = "10101110"  # 8位明文
+ciphertext = "01010100"  # 8位密文
+
+# S-DES加密函数
+def encrypt_with_key(key, plaintext):
+    s_des = S_DES_algorithm.S_DES(key)  # S-DES加密算法
+    return s_des.encrypt_one(plaintext)
+
+# 穷举法破解密钥
+def brute_force_key(plaintext, ciphertext):
+    # 生成所有可能的10位二进制密钥组合
+    for key_tuple in itertools.product('01', repeat=10):
+        key = ''.join(key_tuple)
+        encrypted_text = encrypt_with_key(key, plaintext)
+
+        # 如果密文匹配，返回找到的密钥
+        if encrypted_text == ciphertext:
+            return key
+    return None  # 如果没有找到
+
+# 执行穷举搜索
+found_key = brute_force_key(plaintext, ciphertext)
+
+if found_key:
+    print(f"找到的密钥是: {found_key}")
+else:
+    print("没有找到匹配的密钥")
+end_time = time.time()
+print(end_time - start_time,'s')
